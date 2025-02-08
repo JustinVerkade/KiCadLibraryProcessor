@@ -3,18 +3,18 @@ import tkinter as tk
 from tkinter import filedialog
 import os
 
-SYMACSYS_LIB_DIR = '/media/justin/Storage SSD/Programming/SamacSysLibs/'
-SAMACSYS_SYMBOL_FILE = '/media/justin/Storage SSD/Programming/SamacSysLibs/JVER_Symbols/JVER.kicad_sym'
-SAMACSYS_MODELS_DIR = '/media/justin/Storage SSD/Programming/SamacSysLibs/JVER_Models/'
-SAMACSYS_PRETTY_DIR = '/media/justin/Storage SSD/Programming/SamacSysLibs/JVER.pretty/'
-SAMACSYS_LOG_FILE = '/media/justin/Storage SSD/Programming/SamacSysLibs/JVER_Installed.yaml'
+SYMACSYS_LIB_DIR = '/media/justin/StorageSSD/Programming/KiCadLibraryProcessor/SamacSysLibs/'
+SAMACSYS_SYMBOL_FILE = '/media/justin/StorageSSD/Programming/KiCadLibraryProcessor/SamacSysLibs/JVER_Symbols/JVER.kicad_sym'
+SAMACSYS_MODELS_DIR = '/media/justin/StorageSSD/Programming/KiCadLibraryProcessor/SamacSysLibs/JVER_Models/'
+SAMACSYS_PRETTY_DIR = '/media/justin/StorageSSD/Programming/KiCadLibraryProcessor/SamacSysLibs/JVER.pretty/'
+SAMACSYS_LOG_FILE = '/media/justin/StorageSSD/Programming/KiCadLibraryProcessor/SamacSysLibs/JVER_Installed.yaml'
 DOWNLOADS_DIR = '/home/justin/Downloads/'
 
 def main():
     root = tk.Tk()
     root.iconify()
     file_location = filedialog.askopenfile(initialdir=DOWNLOADS_DIR).name
-    file_name = file_location.split('/')[-1].split('.')[0]
+    file_name = ".".join(file_location.split('/')[-1].split('.')[:-1])
     new_directory = "%s%s/" % (SYMACSYS_LIB_DIR, file_name)
     unzip_dir = file_name[4:]
 
@@ -25,7 +25,7 @@ def main():
             return
 
     subprocess.call("mkdir -p '%s%s'/" % (SYMACSYS_LIB_DIR, file_name), shell=True)
-    subprocess.call("mv '%s' '%s'" % (file_location, new_directory), shell=True)
+    subprocess.call("cp '%s' '%s'" % (file_location, new_directory, ), shell=True)
     subprocess.call("unzip '%s%s.zip' -d '%s'" % (new_directory, file_name, new_directory), shell=True)
 
     unzip_dir = file_name[4:]
@@ -36,12 +36,12 @@ def main():
             symbol_file = "%s%s" % (kicad_file_dir, file)
             addSymbol(symbol_file)
         elif extension == 'kicad_mod':
+            print("mv '%s%s' '%s%s'" % (kicad_file_dir, file, SAMACSYS_PRETTY_DIR, file))
             subprocess.call("mv '%s%s' '%s'" % (kicad_file_dir, file, SAMACSYS_PRETTY_DIR), shell=True)
 
     model_dir = "%s%s/3D/" % (new_directory, unzip_dir)
     for file in os.listdir(model_dir):
         subprocess.call("mv '%s%s' '%s'" % (model_dir, file, SAMACSYS_MODELS_DIR), shell=True)
-        print(file)
 
     if len(new_directory) > 5:
         subprocess.call("rm -rf '%s'" % (new_directory), shell=True)
