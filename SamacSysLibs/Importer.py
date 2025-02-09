@@ -36,7 +36,6 @@ def main():
             symbol_file = "%s%s" % (kicad_file_dir, file)
             addSymbol(symbol_file)
         elif extension == 'kicad_mod':
-            print("mv '%s%s' '%s%s'" % (kicad_file_dir, file, SAMACSYS_PRETTY_DIR, file))
             subprocess.call("mv '%s%s' '%s'" % (kicad_file_dir, file, SAMACSYS_PRETTY_DIR), shell=True)
 
     model_dir = "%s%s/3D/" % (new_directory, unzip_dir)
