@@ -3,29 +3,32 @@ import openpyxl as pyxl
 import tkinter as tk
 import datetime as dt
 import pandas as pd
+from tkinter.filedialog import askopenfilename
     
 ############################
 ###### USER CONSTANTS ######
 ############################
 
-TARGET_DIR          = ".\\"
-TARGET_CSV          = "FoxConnect.csv"
+TARGET_CSV          = askopenfilename()
 
 ###############################
 ###### LIBRARY CONSTANTS ######
 ###############################
 
-LIBRARY_WORKBOOK    = ".\\20240322-Electrical component library.xlsx"
+LIBRARY_WORKBOOK    = "./20240322-Electrical component library.xlsx"
 
 ##############################
 ###### SCRIPT CONSTANTS ######
 ##############################
 
 BOM_AUTHOR          = "Justin Verkade"
-TARGET_FILE         = TARGET_DIR + "\\" + TARGET_CSV
-PROJECT_NAME        = TARGET_CSV.split('.')[0]
-BOM_FILE_FORMAT     = "{}-{} BOM.xlsx"
-OUTPUT_FILE_NAME    = TARGET_DIR + "\\" + BOM_FILE_FORMAT.format(str(dt.datetime.now().date()), PROJECT_NAME)
+TARGET_FILE         = TARGET_CSV
+TARGET_DIR          = "/".join(TARGET_CSV.split("/")[:-1])
+PROJECT_NAME        = TARGET_FILE.split("/")[-1].split('.')[0]
+BOM_FILE_FORMAT     = "{}-{}_BOM.xlsx"
+OUTPUT_FILE_NAME    = TARGET_DIR + "/" + BOM_FILE_FORMAT.format(str(dt.datetime.now().date()), PROJECT_NAME)
+
+print(OUTPUT_FILE_NAME)
 
 ####################
 ###### SCRIPT ######
@@ -34,8 +37,6 @@ OUTPUT_FILE_NAME    = TARGET_DIR + "\\" + BOM_FILE_FORMAT.format(str(dt.datetime
 def main():
     bill_of_materials = createTemplate(TARGET_DIR, TARGET_CSV)
     bill_of_materials = processKiCadBOM(bill_of_materials)
-
-
     bill_of_materials.save(OUTPUT_FILE_NAME)
 
 def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
@@ -50,6 +51,15 @@ def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
     columns = ["Id","Designator","Footprint","Quantity","Designation","Supplier and ref", "1", "2"]
     csv_dataframe = pd.read_csv(TARGET_FILE, delimiter=';', header=0, names=columns)
     csv_dataframe = csv_dataframe.reset_index()
+    csv_line_count = csv_dataframe.shape[0]
+
+    # log dataframe information
+    print("File: %s.csv" % PROJECT_NAME)
+    print("Components: %d\n" % csv_line_count)
+
+    # log process status
+    print("Start processing:")
+    print("\rProgress [%60s][%3d%%]" % ("", 0), end="", flush=True)
 
     # process CSV
     actual_row = 0
@@ -325,8 +335,24 @@ def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
             sheet[f"F{actual_row + 8}"].alignment = Alignment(horizontal='left')
             sheet[f"F{actual_row + 8}"].number_format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
 
+            # log failure
+            print("\rFailed: %s%s" % (manufacturer_number, " " * 80))
+
         # increment row
         actual_row += 1
+
+        # update progress bar
+        percentage = int(100 * (index + 1) / csv_line_count)
+        bar = "#" * int(60 * percentage / 100)
+        print("\rProgress [%-60s][%3d%%]" % (bar, percentage), end="", flush=True)
+
+    # log update finished
+    percentage = 100
+    bar = "#" * int(60 * percentage / 100)
+    print("\rProgress [%-60s][%3d%%]" % (bar, percentage), end="", flush=True)
+    print("\nProcessing completed!")
+    print("─" * 80)
+    print("Goodbye...")
 
     # write total cost formula
     sheet[f"E{actual_row + 8}"].value = "Total:"
@@ -340,8 +366,16 @@ def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
     return bill_of_materials
 
 def createTemplate(target_dir:str, target_csv:str) -> pyxl.Workbook:
+    # log progress
+    print("─" * 80)
+    print("Create workbook ", end="", flush=True)
+
     # create workbook
     bill_of_materials = pyxl.Workbook()
+
+    # log progress
+    print("DONE")
+    print("Create worksheet ", end="", flush=True)
     
     # create data sheet
     sheet = bill_of_materials.active
@@ -387,6 +421,10 @@ def createTemplate(target_dir:str, target_csv:str) -> pyxl.Workbook:
     sheet.column_dimensions['E'].width = 12     # Qty
     sheet.column_dimensions['F'].width = 12     # Total
     sheet.column_dimensions['G'].width = 100    # Url
+
+    # log progress
+    print("DONE")
+    print("─" * 80)
 
     return bill_of_materials
 
