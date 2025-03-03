@@ -10,46 +10,85 @@ SAMACSYS_PRETTY_DIR = '/media/justin/StorageSSD/Programming/KiCadLibraryProcesso
 SAMACSYS_LOG_FILE = '/media/justin/StorageSSD/Programming/KiCadLibraryProcessor/SamacSysLibs/JVER_Installed.yaml'
 DOWNLOADS_DIR = '/home/justin/Downloads/'
 
+#
+# Function: main
+# --------------
+# Open a compressed component and install it into
+# the JVER KiCad component library.
+#
 def main():
-    root = tk.Tk()
-    root.iconify()
-    file_location = filedialog.askopenfile(initialdir=DOWNLOADS_DIR).name
+    file_location = getDownloadedLibrary()
     file_name = ".".join(file_location.split('/')[-1].split('.')[:-1])
     new_directory = "%s%s/" % (SYMACSYS_LIB_DIR, file_name)
-    unzip_dir = file_name[4:]
+    unzip_directory = file_name[4:]
 
-    with open(SAMACSYS_LOG_FILE, "r") as file:
-        data = file.read()
-        if unzip_dir in data:
-            print("Component already installed!\n")
-            return
+    if (alreadyInstalled(unzip_directory)):
+        print("Component already installed!\n")
+        return
 
-    subprocess.call("mkdir -p '%s%s'/" % (SYMACSYS_LIB_DIR, file_name), shell=True)
-    subprocess.call("cp '%s' '%s'" % (file_location, new_directory, ), shell=True)
-    subprocess.call("unzip '%s%s.zip' -d '%s'" % (new_directory, file_name, new_directory), shell=True)
+    make_dir_command = "mkdir -p '%s%s'/" % (SYMACSYS_LIB_DIR, file_name)
+    copy_command = "cp '%s' '%s'" % (file_location, new_directory)
+    unzip_command = "unzip '%s%s.zip' -d '%s'" % (new_directory, file_name, new_directory)
+    subprocess.call(make_dir_command, shell=True)
+    subprocess.call(copy_command, shell=True)
+    subprocess.call(unzip_command, shell=True)
 
-    unzip_dir = file_name[4:]
-    kicad_file_dir = "%s%s/KiCad/" % (new_directory, unzip_dir)
+    unzip_directory = file_name[4:]
+    kicad_file_dir = "%s%s/KiCad/" % (new_directory, unzip_directory)
     for file in os.listdir(kicad_file_dir):
         extension = file.split(".")[-1]
         if extension == 'kicad_sym':
             symbol_file = "%s%s" % (kicad_file_dir, file)
             addSymbol(symbol_file)
         elif extension == 'kicad_mod':
-            subprocess.call("mv '%s%s' '%s'" % (kicad_file_dir, file, SAMACSYS_PRETTY_DIR), shell=True)
+            move_command = "mv '%s%s' '%s'" % (kicad_file_dir, file, SAMACSYS_PRETTY_DIR)
+            subprocess.call(move_command, shell=True)
 
-    model_dir = "%s%s/3D/" % (new_directory, unzip_dir)
+    model_dir = "%s%s/3D/" % (new_directory, unzip_directory)
     for file in os.listdir(model_dir):
-        subprocess.call("mv '%s%s' '%s'" % (model_dir, file, SAMACSYS_MODELS_DIR), shell=True)
+        move_command = "mv '%s%s' '%s'" % (model_dir, file, SAMACSYS_MODELS_DIR)
+        subprocess.call(move_command, shell=True)
 
     if len(new_directory) > 5:
-        subprocess.call("rm -rf '%s'" % (new_directory), shell=True)
+        remove_command = "rm -rf '%s'" % (new_directory)
+        subprocess.call(remove_command, shell=True)
     else:
         print("rm -rf protection")
 
     with open(SAMACSYS_LOG_FILE, "a") as file:
-        file.write("  %s: True\n" % unzip_dir)
+        file.write("  %s: True\n" % unzip_directory)
 
+#
+# Function: getDownloadedLibrary
+# ------------------------------
+# Open a dialog window for the user to input the location of the
+# downloaded component.
+#
+def getDownloadedLibrary():
+    root = tk.Tk()
+    root.iconify()
+    file_location = filedialog.askopenfile(initialdir=DOWNLOADS_DIR).name
+    return file_location
+
+#
+# Function: alreadyInstalled
+# --------------------------
+# Check if the component is already installed prior.
+#
+# return: Boolean state depending if component is installed.
+#
+def alreadyInstalled(component):
+    with open(SAMACSYS_LOG_FILE, "r") as file:
+    data = file.read()
+    if unzip_dir in component:
+        return 1
+    return 0
+
+#
+# Function: addSymbol
+# -------------------
+# Add symbol information to the symbol libray.
+#
 def addSymbol(symbol_file):
     library = open(SAMACSYS_SYMBOL_FILE, "r")
     symbol = open(symbol_file, "r")

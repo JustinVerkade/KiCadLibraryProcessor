@@ -39,19 +39,22 @@ def main():
     bill_of_materials = processKiCadBOM(bill_of_materials)
     bill_of_materials.save(OUTPUT_FILE_NAME)
 
-def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
-    # get current sheet
-    sheet = bill_of_materials.active
-
-    # open library document
-    library = pyxl.load_workbook(LIBRARY_WORKBOOK)
+def openLibrary(library_filename):
+    library = pyxl.load_workbook(library_filename)
     library_sheet = library.active
+    return library, library_sheet
 
-    # load CSV dataframe
+def openDataframe(target_file):
     columns = ["Id","Designator","Footprint","Quantity","Designation","Supplier and ref", "1", "2"]
     csv_dataframe = pd.read_csv(TARGET_FILE, delimiter=';', header=0, names=columns)
     csv_dataframe = csv_dataframe.reset_index()
     csv_line_count = csv_dataframe.shape[0]
+    return csv_dataframe, csv_line_count
+
+def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
+    sheet = bill_of_materials.active
+    library, library_sheet = openLibrary(LIBRARY_WORKBOOK)
+    csv_dataframe, csv_line_count = openDataframe(TARGET_FILE)
 
     # log dataframe information
     print("File: %s.csv" % PROJECT_NAME)
@@ -64,12 +67,8 @@ def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
     # process CSV
     actual_row = 0
     for index, row in csv_dataframe.iterrows():
-
-        # check if mounting hole
         if "MountingHole" in row["Designation"]:
             continue
-
-        # check if test point
         if "Test" in row["Designation"]:
             continue
 
