@@ -1,59 +1,65 @@
 from openpyxl.styles import Alignment, numbers
 import openpyxl as pyxl
-import tkinter as tk
 import datetime as dt
 import pandas as pd
 from tkinter.filedialog import askopenfilename
-    
-############################
-###### USER CONSTANTS ######
-############################
 
-TARGET_CSV          = askopenfilename()
+# USER CONSTANTS
 
-###############################
-###### LIBRARY CONSTANTS ######
-###############################
+TARGET_CSV = askopenfilename()
 
-LIBRARY_WORKBOOK    = "./20240322-Electrical component library.xlsx"
+# LIBRARY CONSTANTS
 
-##############################
-###### SCRIPT CONSTANTS ######
-##############################
+LIBRARY_WORKBOOK = "./20240322-Electrical component library.xlsx"
 
-BOM_AUTHOR          = "Justin Verkade"
-TARGET_FILE         = TARGET_CSV
-TARGET_DIR          = "/".join(TARGET_CSV.split("/")[:-1])
-PROJECT_NAME        = TARGET_FILE.split("/")[-1].split('.')[0]
-BOM_FILE_FORMAT     = "{}-{}_BOM.xlsx"
-OUTPUT_FILE_NAME    = TARGET_DIR + "/" + BOM_FILE_FORMAT.format(str(dt.datetime.now().date()), PROJECT_NAME)
+# SCRIPT CONSTANTS
 
+BOM_AUTHOR = "Justin Verkade"
+TARGET_FILE = TARGET_CSV
+TARGET_DIR = "/".join(TARGET_CSV.split("/")[:-1])
+PROJECT_NAME = TARGET_FILE.split("/")[-1].split('.')[0]
+BOM_FILE_FORMAT = "{}-{}_BOM.xlsx"
+DATETIME_STRING = str(dt.datetime.now().date())
+BOM_FILE_NAME = BOM_FILE_FORMAT.format(DATETIME_STRING, PROJECT_NAME)
+OUTPUT_FILE_NAME = TARGET_DIR + "/" + BOM_FILE_NAME
 print(OUTPUT_FILE_NAME)
 
-####################
-###### SCRIPT ######
-####################
+# SCRIPT
+
 
 def main():
     bill_of_materials = createTemplate(TARGET_DIR, TARGET_CSV)
     bill_of_materials = processKiCadBOM(bill_of_materials)
     bill_of_materials.save(OUTPUT_FILE_NAME)
 
+
 def openLibrary(library_filename):
     library = pyxl.load_workbook(library_filename)
-    library_sheet = library.active
-    return library, library_sheet
+    sheet = library.active
+    return library, sheet
+
 
 def openDataframe(target_file):
-    columns = ["Id","Designator","Footprint","Quantity","Designation","Supplier and ref", "1", "2"]
-    csv_dataframe = pd.read_csv(TARGET_FILE, delimiter=';', header=0, names=columns)
+    columns = ["Id",
+               "Designator",
+               "Footprint",
+               "Quantity",
+               "Designation",
+               "Supplier and ref",
+               "1",
+               "2"]
+    csv_dataframe = pd.read_csv(TARGET_FILE,
+                                delimiter=';',
+                                header=0,
+                                names=columns)
     csv_dataframe = csv_dataframe.reset_index()
     csv_line_count = csv_dataframe.shape[0]
     return csv_dataframe, csv_line_count
 
-def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
+
+def processKiCadBOM(bill_of_materials: pyxl.Workbook) -> pyxl.Workbook:
     sheet = bill_of_materials.active
-    library, library_sheet = openLibrary(LIBRARY_WORKBOOK)
+    library, sheet = openLibrary(LIBRARY_WORKBOOK)
     csv_dataframe, csv_line_count = openDataframe(TARGET_FILE)
 
     # log dataframe information
@@ -113,45 +119,45 @@ def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
 
             # iterate all components
             library_row = 7
-            while library_sheet[f"B{library_row}"].value:
-                # check type
-                if str(library_sheet[f"B{library_row}"].value) != "Resistor":
+            while sheet[f"B{library_row}"].value:
+                library_type = str(sheet[f"B{library_row}"].value)
+                library_footprint = str(sheet[f"E{library_row}"].value)
+                library_resistance = str(sheet[f"F{library_row}"].value)
+                library_tolerance = str(sheet[f"G{library_row}"].value)
+                library_voltage = str(sheet[f"H{library_row}"].value)
+                library_power = str(sheet[f"I{library_row}"].value)
+                library_cost = float(sheet[f"L{library_row}"].value)
+                if library_type != "Resistor":
                     library_row += 1
                     continue
-                # check footprint
-                if str(library_sheet[f"E{library_row}"].value) != footprint:
+                if library_footprint != footprint:
                     library_row += 1
                     continue
-                # check capacitance
-                if str(resistance and library_sheet[f"F{library_row}"].value) != resistance:
+                if resistance and library_resistance != resistance:
                     library_row += 1
                     continue
-                # check tolerance
-                if str(tolerance and library_sheet[f"G{library_row}"].value) != tolerance:
+                if tolerance and library_tolerance != tolerance:
                     library_row += 1
                     continue
-                # check voltage
-                if str(voltage and library_sheet[f"H{library_row}"].value) != voltage:
+                if voltage and library_voltage != voltage:
                     library_row += 1
                     continue
-                # check power
-                if str(power and library_sheet[f"I{library_row}"].value) != power:
+                if power and library_power != power:
                     library_row += 1
                     continue
-                # get lowest costfitting_component
-                component_cost = float(library_sheet[f"L{library_row}"].value)
-                if component_cost < best_cost:
+                if library_cost < best_cost:
                     fitting_component = library_row
-                    best_cost = component_cost
+                    best_cost = library_cost
                 library_row += 1
-            
+
             # write component information
             if fitting_component:
                 # write manufacturer number
-                manufacturer_number = library_sheet[f"C{fitting_component}"].value
+                manufacturer_number = sheet[f"C{fitting_component}"].value
+                alignment = Alignment(horizontal='left')
                 sheet[f"A{actual_row + 8}"] = manufacturer_number
-                sheet[f"A{actual_row + 8}"].alignment = Alignment(horizontal='left')
-                
+                sheet[f"A{actual_row + 8}"].alignment = alignment
+
                 # write description
                 description = "Resistor "
                 description += footprint + " "
@@ -159,25 +165,32 @@ def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
                 description += voltage + " "
                 description += tolerance + " "
                 description += power
+                alingment = Alignment(horizontal='left')
                 sheet[f"B{actual_row + 8}"] = description
-                sheet[f"B{actual_row + 8}"].alignment = Alignment(horizontal='left')
+                sheet[f"B{actual_row + 8}"].alignment = alingment
 
                 # write costs
                 costs = best_cost
+                alignment = Alignment(horizontal='left')
+                format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
                 sheet[f"D{actual_row + 8}"] = costs
-                sheet[f"D{actual_row + 8}"].alignment = Alignment(horizontal='left')
-                sheet[f"D{actual_row + 8}"].number_format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
-                
+                sheet[f"D{actual_row + 8}"].alignment = alignment
+                sheet[f"D{actual_row + 8}"].number_format = format
+
                 # write total sum
-                sheet[f"F{actual_row + 8}"] = f"=D{actual_row + 8} * E{actual_row + 8}"
-                sheet[f"F{actual_row + 8}"].alignment = Alignment(horizontal='left')
-                sheet[f"F{actual_row + 8}"].number_format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
-                
+                string = f"=D{actual_row + 8} * E{actual_row + 8}"
+                alignment = Alignment(horizontal='left')
+                format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
+                sheet[f"F{actual_row + 8}"] = string
+                sheet[f"F{actual_row + 8}"].alignment = alignment
+                sheet[f"F{actual_row + 8}"].number_format = format
+
                 # write url
-                url = library_sheet[f"M{fitting_component}"].value
+                url = sheet[f"M{fitting_component}"].value
+                alignment = Alignment(horizontal='left')
                 sheet[f"G{actual_row + 8}"].hyperlink = url
                 sheet[f"G{actual_row + 8}"].value = url
-                sheet[f"G{actual_row + 8}"].alignment = Alignment(horizontal='left')
+                sheet[f"G{actual_row + 8}"].alignment = alignment
                 sheet[f"G{actual_row + 8}"].style = "Hyperlink"
                 processed = True
 
@@ -205,66 +218,73 @@ def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
 
             # iterate all components
             library_row = 7
-            while library_sheet[f"B{library_row}"].value:
-                # check type
-                if library_sheet[f"B{library_row}"].value != "Capacitor":
+            while sheet[f"B{library_row}"].value:
+                library_type = sheet[f"B{library_row}"].value
+                library_footprint = sheet[f"E{library_row}"].value
+                library_capacitance = sheet[f"F{library_row}"].value
+                library_tolerance = sheet[f"G{library_row}"].value
+                library_voltage = sheet[f"H{library_row}"].value
+                library_cost = float(sheet[f"L{library_row}"].value)
+                if library_type != "Capacitor":
                     library_row += 1
                     continue
-                # check footprint
-                if library_sheet[f"E{library_row}"].value != footprint:
+                if library_footprint != footprint:
                     library_row += 1
                     continue
-                # check capacitance
-                if capacitance and library_sheet[f"F{library_row}"].value != capacitance:
+                if capacitance and library_capacitance != capacitance:
                     library_row += 1
                     continue
-                # check tolerance
-                if tolerance and library_sheet[f"G{library_row}"].value != tolerance:
+                if tolerance and library_tolerance != tolerance:
                     library_row += 1
                     continue
-                # check voltage
-                if voltage and library_sheet[f"H{library_row}"].value != voltage:
+                if voltage and library_voltage != voltage:
                     library_row += 1
                     continue
-                # get lowest costfitting_component
-                component_cost = float(library_sheet[f"L{library_row}"].value)
-                if component_cost < best_cost:
+                if library_cost < best_cost:
                     fitting_component = library_row
-                    best_cost = component_cost
+                    best_cost = library_cost
                 library_row += 1
-            
+
             # write component information
             if fitting_component:
                 # write manufacturer number
-                manufacturer_number = library_sheet[f"C{fitting_component}"].value
-                sheet[f"A{actual_row + 8}"] = manufacturer_number
-                sheet[f"A{actual_row + 8}"].alignment = Alignment(horizontal='left')
-                
+                alignment = Alignment(horizontal='left')
+                manufacturer_id = sheet[f"C{fitting_component}"].value
+                sheet[f"A{actual_row + 8}"] = manufacturer_id
+                sheet[f"A{actual_row + 8}"].alignment = alignment
+
                 # write description
                 description = "Capacitor "
                 description += footprint + " "
                 description += capacitance + " "
                 description += voltage + " "
                 description += tolerance
+                alignment = Alignment(horizontal='left')
                 sheet[f"B{actual_row + 8}"] = description
-                sheet[f"B{actual_row + 8}"].alignment = Alignment(horizontal='left')
+                sheet[f"B{actual_row + 8}"].alignment = alignment
 
                 # write costs
                 costs = best_cost
+                alginment = Alignment(horizontal='left')
+                format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
                 sheet[f"D{actual_row + 8}"] = costs
-                sheet[f"D{actual_row + 8}"].alignment = Alignment(horizontal='left')
-                sheet[f"D{actual_row + 8}"].number_format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
-                
+                sheet[f"D{actual_row + 8}"].alignment = alginment
+                sheet[f"D{actual_row + 8}"].number_format = format
+
                 # write total sum
-                sheet[f"F{actual_row + 8}"] = f"=D{actual_row + 8} * E{actual_row + 8}"
-                sheet[f"F{actual_row + 8}"].alignment = Alignment(horizontal='left')
-                sheet[f"F{actual_row + 8}"].number_format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
-                
+                sum_string = f"=D{actual_row + 8} * E{actual_row + 8}"
+                alignment = Alignment(horizontal='left')
+                format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
+                sheet[f"F{actual_row + 8}"] = sum_string
+                sheet[f"F{actual_row + 8}"].alignment = alignment
+                sheet[f"F{actual_row + 8}"].number_format = format
+
                 # write url
-                url = library_sheet[f"M{fitting_component}"].value
+                url = sheet[f"M{fitting_component}"].value
+                alignment = Alignment(horizontal='left')
                 sheet[f"G{actual_row + 8}"].hyperlink = url
                 sheet[f"G{actual_row + 8}"].value = url
-                sheet[f"G{actual_row + 8}"].alignment = Alignment(horizontal='left')
+                sheet[f"G{actual_row + 8}"].alignment = alignment
                 sheet[f"G{actual_row + 8}"].style = "Hyperlink"
                 processed = True
 
@@ -272,46 +292,52 @@ def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
         else:
             # iterate all components
             library_row = 7
-            while library_sheet[f"B{library_row}"].value:
+            while sheet[f"B{library_row}"].value:
                 # check if type is simular
-                if library_sheet[f"C{library_row}"].value != row["Designation"]:
+                if sheet[f"C{library_row}"].value != row["Designation"]:
                     library_row += 1
                     continue
 
                 # write manufacturer number
-                manufacturer_number = library_sheet[f"C{library_row}"].value
+                manufacturer_number = sheet[f"C{library_row}"].value
+                alignment = Alignment(horizontal='left')
                 sheet[f"A{actual_row + 8}"] = manufacturer_number
-                sheet[f"A{actual_row + 8}"].alignment = Alignment(horizontal='left')
-                
+                sheet[f"A{actual_row + 8}"].alignment = alignment
+
                 # write description
-                description = str(library_sheet[f"B{library_row}"].value) + " "
-                if library_sheet[f"E{library_row}"].value:
-                    description += str(library_sheet[f"E{library_row}"].value) + " "
-                if library_sheet[f"F{library_row}"].value:
-                    description += str(library_sheet[f"F{library_row}"].value) + " "
-                # if library_sheet[f"G{library_row}"].value:
-                #     description += str(library_sheet[f"G{library_row}"].value) + " "
-                # if library_sheet[f"H{library_row}"].value:
-                #     description += str(library_sheet[f"H{library_row}"].value)
+                description = str(sheet[f"B{library_row}"].value) + " "
+                if sheet[f"E{library_row}"].value:
+                    format = str(sheet[f"E{library_row}"].value)
+                    description += format + " "
+                if sheet[f"F{library_row}"].value:
+                    format = str(sheet[f"F{library_row}"].value)
+                    description += format + " "
+                alignment = Alignment(horizontal='left')
                 sheet[f"B{actual_row + 8}"] = description
-                sheet[f"B{actual_row + 8}"].alignment = Alignment(horizontal='left')
+                sheet[f"B{actual_row + 8}"].alignment = alignment
 
                 # write costs
-                costs = float(library_sheet[f"L{library_row}"].value)
+                costs = float(sheet[f"L{library_row}"].value)
+                alignment = Alignment(horizontal='left')
+                format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
                 sheet[f"D{actual_row + 8}"] = costs
-                sheet[f"D{actual_row + 8}"].alignment = Alignment(horizontal='left')
-                sheet[f"D{actual_row + 8}"].number_format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
-                
+                sheet[f"D{actual_row + 8}"].alignment = alignment
+                sheet[f"D{actual_row + 8}"].number_format = format
+
                 # write total sum
-                sheet[f"F{actual_row + 8}"] = f"=D{actual_row + 8} * E{actual_row + 8}"
-                sheet[f"F{actual_row + 8}"].alignment = Alignment(horizontal='left')
-                sheet[f"F{actual_row + 8}"].number_format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
-                
+                string = f"=D{actual_row + 8} * E{actual_row + 8}"
+                alignment = Alignment(horizontal='left')
+                format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
+                sheet[f"F{actual_row + 8}"] = string
+                sheet[f"F{actual_row + 8}"].alignment = alignment
+                sheet[f"F{actual_row + 8}"].number_format = format
+
                 # write url
-                url = library_sheet[f"M{library_row}"].value
+                url = sheet[f"M{library_row}"].value
+                alignment = Alignment(horizontal='left')
                 sheet[f"G{actual_row + 8}"].hyperlink = url
                 sheet[f"G{actual_row + 8}"].value = url
-                sheet[f"G{actual_row + 8}"].alignment = Alignment(horizontal='left')
+                sheet[f"G{actual_row + 8}"].alignment = alignment
                 sheet[f"G{actual_row + 8}"].style = "Hyperlink"
                 processed = True
                 break
@@ -320,19 +346,25 @@ def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
         if not processed:
             # write manufacturer number
             manufacturer_number = row["Footprint"] + ' - ' + row["Designation"]
+            alignment = Alignment(horizontal='left')
             sheet[f"B{actual_row + 8}"] = manufacturer_number
-            sheet[f"B{actual_row + 8}"].alignment = Alignment(horizontal='left')
-                    
+            sheet[f"B{actual_row + 8}"].alignment = alignment
+
             # write costs
             costs = 0
+            alignment = Alignment(horizontal='left')
+            format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
             sheet[f"D{actual_row + 8}"] = costs
-            sheet[f"D{actual_row + 8}"].alignment = Alignment(horizontal='left')
-            sheet[f"D{actual_row + 8}"].number_format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
-            
+            sheet[f"D{actual_row + 8}"].alignment = alignment
+            sheet[f"D{actual_row + 8}"].number_format = format
+
             # write total sum
-            sheet[f"F{actual_row + 8}"] = f"=D{actual_row + 8} * E{actual_row + 8}"
-            sheet[f"F{actual_row + 8}"].alignment = Alignment(horizontal='left')
-            sheet[f"F{actual_row + 8}"].number_format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
+            string = f"=D{actual_row + 8} * E{actual_row + 8}"
+            alignment = Alignment(horizontal='left')
+            format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
+            sheet[f"F{actual_row + 8}"] = string
+            sheet[f"F{actual_row + 8}"].alignment = alignment
+            sheet[f"F{actual_row + 8}"].number_format = format
 
             # log failure
             print("\rFailed: %s%s" % (manufacturer_number, " " * 80))
@@ -343,7 +375,9 @@ def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
         # update progress bar
         percentage = int(100 * (index + 1) / csv_line_count)
         bar = "#" * int(60 * percentage / 100)
-        print("\rProgress [%-60s][%3d%%]" % (bar, percentage), end="", flush=True)
+        print("\rProgress [%-60s][%3d%%]" % (bar, percentage),
+              end="",
+              flush=True)
 
     # log update finished
     percentage = 100
@@ -354,17 +388,22 @@ def processKiCadBOM(bill_of_materials:pyxl.Workbook) -> pyxl.Workbook:
     print("Goodbye...")
 
     # write total cost formula
+    alignment = Alignment(horizontal='left')
     sheet[f"E{actual_row + 8}"].value = "Total:"
-    sheet[f"E{actual_row + 8}"].alignment = Alignment(horizontal='left')
+    sheet[f"E{actual_row + 8}"].alignment = alignment
+
+    alignment = Alignment(horizontal='left')
+    format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
     sheet[f"F{actual_row + 8}"].value = f"=SUM(F8:F{actual_row + 7})"
-    sheet[f"F{actual_row + 8}"].alignment = Alignment(horizontal='left')
-    sheet[f"F{actual_row + 8}"].number_format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
+    sheet[f"F{actual_row + 8}"].alignment = alignment
+    sheet[f"F{actual_row + 8}"].number_format = format
 
     # close library document
     library.close()
     return bill_of_materials
 
-def createTemplate(target_dir:str, target_csv:str) -> pyxl.Workbook:
+
+def createTemplate() -> pyxl.Workbook:
     # log progress
     print("─" * 80)
     print("Create workbook ", end="", flush=True)
@@ -375,7 +414,7 @@ def createTemplate(target_dir:str, target_csv:str) -> pyxl.Workbook:
     # log progress
     print("DONE")
     print("Create worksheet ", end="", flush=True)
-    
+
     # create data sheet
     sheet = bill_of_materials.active
     sheet.title = PROJECT_NAME
@@ -426,6 +465,7 @@ def createTemplate(target_dir:str, target_csv:str) -> pyxl.Workbook:
     print("─" * 80)
 
     return bill_of_materials
+
 
 if __name__ == "__main__":
     main()
