@@ -28,8 +28,8 @@ print(OUTPUT_FILE_NAME)
 
 
 def main():
-    bill_of_materials = createTemplate(TARGET_DIR, TARGET_CSV)
-    bill_of_materials = processKiCadBOM(bill_of_materials)
+    bill_of_materials = createTemplate()
+    processKiCadBOM(bill_of_materials)
     bill_of_materials.save(OUTPUT_FILE_NAME)
 
 
@@ -59,7 +59,7 @@ def openDataframe(target_file):
 
 def processKiCadBOM(bill_of_materials: pyxl.Workbook) -> pyxl.Workbook:
     sheet = bill_of_materials.active
-    library, sheet = openLibrary(LIBRARY_WORKBOOK)
+    library, lib_sheet = openLibrary(LIBRARY_WORKBOOK)
     csv_dataframe, csv_line_count = openDataframe(TARGET_FILE)
 
     # log dataframe information
@@ -119,14 +119,14 @@ def processKiCadBOM(bill_of_materials: pyxl.Workbook) -> pyxl.Workbook:
 
             # iterate all components
             library_row = 7
-            while sheet[f"B{library_row}"].value:
-                library_type = str(sheet[f"B{library_row}"].value)
-                library_footprint = str(sheet[f"E{library_row}"].value)
-                library_resistance = str(sheet[f"F{library_row}"].value)
-                library_tolerance = str(sheet[f"G{library_row}"].value)
-                library_voltage = str(sheet[f"H{library_row}"].value)
-                library_power = str(sheet[f"I{library_row}"].value)
-                library_cost = float(sheet[f"L{library_row}"].value)
+            while lib_sheet[f"B{library_row}"].value:
+                library_type = str(lib_sheet[f"B{library_row}"].value)
+                library_footprint = str(lib_sheet[f"E{library_row}"].value)
+                library_resistance = str(lib_sheet[f"F{library_row}"].value)
+                library_tolerance = str(lib_sheet[f"G{library_row}"].value)
+                library_voltage = str(lib_sheet[f"H{library_row}"].value)
+                library_power = str(lib_sheet[f"I{library_row}"].value)
+                library_cost = float(lib_sheet[f"L{library_row}"].value)
                 if library_type != "Resistor":
                     library_row += 1
                     continue
@@ -153,7 +153,7 @@ def processKiCadBOM(bill_of_materials: pyxl.Workbook) -> pyxl.Workbook:
             # write component information
             if fitting_component:
                 # write manufacturer number
-                manufacturer_number = sheet[f"C{fitting_component}"].value
+                manufacturer_number = lib_sheet[f"C{fitting_component}"].value
                 alignment = Alignment(horizontal='left')
                 sheet[f"A{actual_row + 8}"] = manufacturer_number
                 sheet[f"A{actual_row + 8}"].alignment = alignment
@@ -186,7 +186,7 @@ def processKiCadBOM(bill_of_materials: pyxl.Workbook) -> pyxl.Workbook:
                 sheet[f"F{actual_row + 8}"].number_format = format
 
                 # write url
-                url = sheet[f"M{fitting_component}"].value
+                url = lib_sheet[f"M{fitting_component}"].value
                 alignment = Alignment(horizontal='left')
                 sheet[f"G{actual_row + 8}"].hyperlink = url
                 sheet[f"G{actual_row + 8}"].value = url
@@ -218,13 +218,13 @@ def processKiCadBOM(bill_of_materials: pyxl.Workbook) -> pyxl.Workbook:
 
             # iterate all components
             library_row = 7
-            while sheet[f"B{library_row}"].value:
-                library_type = sheet[f"B{library_row}"].value
-                library_footprint = sheet[f"E{library_row}"].value
-                library_capacitance = sheet[f"F{library_row}"].value
-                library_tolerance = sheet[f"G{library_row}"].value
-                library_voltage = sheet[f"H{library_row}"].value
-                library_cost = float(sheet[f"L{library_row}"].value)
+            while lib_sheet[f"B{library_row}"].value:
+                library_type = lib_sheet[f"B{library_row}"].value
+                library_footprint = lib_sheet[f"E{library_row}"].value
+                library_capacitance = lib_sheet[f"F{library_row}"].value
+                library_tolerance = lib_sheet[f"G{library_row}"].value
+                library_voltage = lib_sheet[f"H{library_row}"].value
+                library_cost = float(lib_sheet[f"L{library_row}"].value)
                 if library_type != "Capacitor":
                     library_row += 1
                     continue
@@ -249,7 +249,7 @@ def processKiCadBOM(bill_of_materials: pyxl.Workbook) -> pyxl.Workbook:
             if fitting_component:
                 # write manufacturer number
                 alignment = Alignment(horizontal='left')
-                manufacturer_id = sheet[f"C{fitting_component}"].value
+                manufacturer_id = lib_sheet[f"C{fitting_component}"].value
                 sheet[f"A{actual_row + 8}"] = manufacturer_id
                 sheet[f"A{actual_row + 8}"].alignment = alignment
 
@@ -280,7 +280,7 @@ def processKiCadBOM(bill_of_materials: pyxl.Workbook) -> pyxl.Workbook:
                 sheet[f"F{actual_row + 8}"].number_format = format
 
                 # write url
-                url = sheet[f"M{fitting_component}"].value
+                url = lib_sheet[f"M{fitting_component}"].value
                 alignment = Alignment(horizontal='left')
                 sheet[f"G{actual_row + 8}"].hyperlink = url
                 sheet[f"G{actual_row + 8}"].value = url
@@ -292,32 +292,32 @@ def processKiCadBOM(bill_of_materials: pyxl.Workbook) -> pyxl.Workbook:
         else:
             # iterate all components
             library_row = 7
-            while sheet[f"B{library_row}"].value:
+            while lib_sheet[f"B{library_row}"].value:
                 # check if type is simular
-                if sheet[f"C{library_row}"].value != row["Designation"]:
+                if lib_sheet[f"C{library_row}"].value != row["Designation"]:
                     library_row += 1
                     continue
 
                 # write manufacturer number
-                manufacturer_number = sheet[f"C{library_row}"].value
+                manufacturer_number = lib_sheet[f"C{library_row}"].value
                 alignment = Alignment(horizontal='left')
                 sheet[f"A{actual_row + 8}"] = manufacturer_number
                 sheet[f"A{actual_row + 8}"].alignment = alignment
 
                 # write description
-                description = str(sheet[f"B{library_row}"].value) + " "
+                description = str(lib_sheet[f"B{library_row}"].value) + " "
                 if sheet[f"E{library_row}"].value:
-                    format = str(sheet[f"E{library_row}"].value)
+                    format = str(lib_sheet[f"E{library_row}"].value)
                     description += format + " "
                 if sheet[f"F{library_row}"].value:
-                    format = str(sheet[f"F{library_row}"].value)
+                    format = str(lib_sheet[f"F{library_row}"].value)
                     description += format + " "
                 alignment = Alignment(horizontal='left')
                 sheet[f"B{actual_row + 8}"] = description
                 sheet[f"B{actual_row + 8}"].alignment = alignment
 
                 # write costs
-                costs = float(sheet[f"L{library_row}"].value)
+                costs = float(lib_sheet[f"L{library_row}"].value)
                 alignment = Alignment(horizontal='left')
                 format = numbers.FORMAT_CURRENCY_EUR_SIMPLE
                 sheet[f"D{actual_row + 8}"] = costs
@@ -333,7 +333,7 @@ def processKiCadBOM(bill_of_materials: pyxl.Workbook) -> pyxl.Workbook:
                 sheet[f"F{actual_row + 8}"].number_format = format
 
                 # write url
-                url = sheet[f"M{library_row}"].value
+                url = lib_sheet[f"M{library_row}"].value
                 alignment = Alignment(horizontal='left')
                 sheet[f"G{actual_row + 8}"].hyperlink = url
                 sheet[f"G{actual_row + 8}"].value = url
@@ -400,7 +400,6 @@ def processKiCadBOM(bill_of_materials: pyxl.Workbook) -> pyxl.Workbook:
 
     # close library document
     library.close()
-    return bill_of_materials
 
 
 def createTemplate() -> pyxl.Workbook:

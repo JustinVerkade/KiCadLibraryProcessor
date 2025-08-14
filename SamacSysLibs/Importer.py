@@ -17,7 +17,6 @@ DOWNLOADS_DIR = '/home/justin/Downloads/'
 # the JVER KiCad component library.
 #
 
-
 def main():
     file_location = getDownloadedLibrary()
     file_name = ".".join(file_location.split('/')[-1].split('.')[:-1])
